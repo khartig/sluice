@@ -42,20 +42,24 @@ Nothing in Pear is patched or extended.
 
 ## Running it
 
-Node 24 or later, and pnpm.
+Node 24 or later. sluice is published to npm as `sluice-relay`, and
+installs a `sluice` command:
 
 ```sh
-pnpm install --frozen-lockfile
-node bin/sluice.js                              # relay on the public DHT
-node bin/sluice.js --pairing-log ./pairing-log  # and log each pairing
+npm install --global sluice-relay
+sluice                                  # relay on the public DHT
+sluice --pairing-log ./pairing-log      # and log each pairing
 ```
+
+From a clone, `pnpm install --frozen-lockfile` and then
+`node bin/sluice.js` does the same.
 
 It prints its public key, in hex and in z-base-32. Clients name the
 relay by that key: Adhal's `--relay=<key>`. The key pair is created on
 first run in `~/.sluice` (`--storage` to change it) and reused after, so
 the key stays the same across restarts. Its seed file must stay readable
-only by its owner. `node bin/sluice.js --print-key` prints the key and
-exits. `--port` fixes the DHT node's UDP port, for a firewall rule.
+only by its owner. `sluice --print-key` prints the key and exits.
+`--port` fixes the DHT node's UDP port, for a firewall rule.
 
 SIGINT or SIGTERM stops it: every session is ended, the log is flushed,
 and blind-relay's totals are printed.
@@ -79,7 +83,13 @@ pnpm test        # node --test, on a local hyperdht testnet
 pnpm typecheck   # tsc --noEmit over the JSDoc types
 ```
 
-Dependencies are pinned exactly, and follow Adhal's
-[DEPENDENCY-POLICY.md](https://github.com/khartig/adhal/blob/main/docs/DEPENDENCY-POLICY.md).
-hyperdht 6.36.0 and blind-relay 1.6.1 are the versions Adhal and Pear
-use. The lockfile has one blind-relay, shared with hyperdht.
+Dependencies are pinned exactly, and CI fails on any advisory that
+`pnpm audit` or OSV-Scanner reports:
+[docs/DEPENDENCY-POLICY.md](docs/DEPENDENCY-POLICY.md). hyperdht 6.36.0
+and blind-relay 1.6.1 are the versions Adhal and Pear use. The lockfile
+has one blind-relay, shared with hyperdht.
+
+- [docs/DEPLOYING.md](docs/DEPLOYING.md): a systemd service on a Linux
+  server, next to Pear's relay if one is running there.
+- [docs/RELEASING.md](docs/RELEASING.md): publishing to npm, with
+  provenance, from a GitHub Release.
