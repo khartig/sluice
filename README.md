@@ -5,7 +5,8 @@ A relay host for groups that run their own blind relay: Holepunch's
 Pear's `pear blind-relay start` bundles, with limits and privacy settings
 an operator chooses.
 
-Status: design. Nothing is built yet.
+Status: first version. A wire-compatible relay with an opt-in log of
+each pairing, and no limits yet.
 
 ## Why it exists
 
@@ -38,3 +39,47 @@ leaves that trade to whoever runs the relay
   on bytes and duration need no forwarding in JavaScript.
 
 Nothing in Pear is patched or extended.
+
+## Running it
+
+Node 24 or later, and pnpm.
+
+```sh
+pnpm install --frozen-lockfile
+node bin/sluice.js                              # relay on the public DHT
+node bin/sluice.js --pairing-log ./pairing-log  # and log each pairing
+```
+
+It prints its public key, in hex and in z-base-32. Clients name the
+relay by that key: Adhal's `--relay=<key>`. The key pair is created on
+first run in `~/.sluice` (`--storage` to change it) and reused after, so
+the key stays the same across restarts. Its seed file must stay readable
+only by its owner. `node bin/sluice.js --print-key` prints the key and
+exits. `--port` fixes the DHT node's UDP port, for a firewall rule.
+
+SIGINT or SIGTERM stops it: every session is ended, the log is flushed,
+and blind-relay's totals are printed.
+
+## What it does now
+
+- **The relay.** Every connection gets blind-relay's `Server`, wired as
+  Pear's relay wires it (Adhal's
+  [RELAY-HOSTS.md](https://github.com/khartig/adhal/blob/main/docs/RELAY-HOSTS.md)
+  §1). There are no caps and no allowlist: every connection is accepted
+  and every pairing relayed.
+- **The pairing log,** off by default: one record per pairing, per
+  unmatched request, and per session, with times, byte counts, which leg
+  closed first, and how. What it holds, how long it is kept, and what
+  each field means is in [docs/PAIRING-LOG.md](docs/PAIRING-LOG.md).
+
+## Development
+
+```sh
+pnpm test        # node --test, on a local hyperdht testnet
+pnpm typecheck   # tsc --noEmit over the JSDoc types
+```
+
+Dependencies are pinned exactly, and follow Adhal's
+[DEPENDENCY-POLICY.md](https://github.com/khartig/adhal/blob/main/docs/DEPENDENCY-POLICY.md).
+hyperdht 6.36.0 and blind-relay 1.6.1 are the versions Adhal and Pear
+use. The lockfile has one blind-relay, shared with hyperdht.
