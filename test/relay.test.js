@@ -81,7 +81,12 @@ test('a pairing record counts each direction separately, natively relayed', asyn
   const { initiator: i, responder: r } = pairing.legs
   assert.ok(i.bytesIn >= 300_000 && i.bytesIn < 300_000 * 1.1, `initiator sent ${i.bytesIn}`)
   assert.ok(r.bytesIn >= 50_000 && r.bytesIn < 50_000 * 1.2, `responder sent ${r.bytesIn}`)
-  assert.ok(i.firstPacketInMs <= r.firstPacketInMs, 'the initiator wrote first')
+  // No order between the legs' first packets: each client's first is the
+  // datagram that connects its leg, sent by both at once, before any data.
+  for (const leg of [i, r]) {
+    assert.ok(leg.firstPacketInMs >= leg.connectMs, 'a leg counts nothing before it connects')
+    assert.ok(leg.lastPacketInMs >= leg.firstPacketInMs)
+  }
   assert.strictEqual(pairing.firstClosed, 'responder')
   assert.ok(r.closeMs <= i.closeMs)
   // blind-relay ends a closing session's legs with this error.
