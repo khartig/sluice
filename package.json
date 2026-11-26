@@ -1,0 +1,51 @@
+{
+  "name": "sluice-relay",
+  "version": "0.1.0",
+  "description": "A blind-relay host for groups that run their own relay: wire-compatible with Pear's, with logging and limits its operator chooses.",
+  "keywords": [
+    "blind-relay",
+    "relay",
+    "hyperdht",
+    "holepunch",
+    "p2p",
+    "pear"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khartig/sluice.git"
+  },
+  "homepage": "https://github.com/khartig/sluice#readme",
+  "bugs": {
+    "url": "https://github.com/khartig/sluice/issues"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs/PAIRING-LOG.md",
+    "docs/DEPLOYING.md"
+  ],
+  "bin": {
+    "sluice": "bin/sluice.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "start": "node bin/sluice.js",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "blind-relay": "1.6.1",
+    "hyperdht": "6.36.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.5.1",
+    "typescript": "7.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

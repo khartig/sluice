@@ -1,0 +1,141 @@
+# CI: types, tests, the package as it would publish, and the two
+# dependency gates from docs/DEPENDENCY-POLICY.md.
+#
+# Modeled on Adhal's ci.yml, with the same action majors (the first on
+# the Node 24 runtime) and the same pinned OSV-Scanner image.
+#
+# THE MATRIX. Linux is where sluice runs: a relay is a server. macOS is
+# where it is developed. Both are required. ubuntu-26.04 is advisory
+# until it has been green for a while, since the Holepunch stack ships
+# native prebuilds that an OS and glibc bump can disturb; then it should
+# be promoted and 24.04 kept or dropped to match the servers in use.
+# Windows is not tested: a relay host is not run there, and the seed
+# file's permission check is POSIX.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  types:
+    name: types
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # JSDoc-typechecked, not TypeScript-authored: this is the only check
+      # on a wrong @param.
+      - run: pnpm typecheck
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.advisory }}
+    strategy:
+      # One OS failing should not hide the result on the others.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            advisory: false
+          - os: macos-latest
+            advisory: false
+          - os: ubuntu-26.04
+            advisory: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Every test runs a hyperdht testnet on loopback; no outside network.
+      - run: pnpm test
+        timeout-minutes: 10
+
+  # The tarball npm would get, checked for what is in it, then installed
+  # globally the way an operator installs it, and run.
+  package:
+    name: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pack --out dist/package.tgz
+      - name: only what should ship is in it
+        run: |
+          tar -tzf dist/package.tgz | sort > files.txt
+          cat files.txt
+          unexpected=$(grep -Ev '^package/(package\.json|README\.md|LICENSE|bin/sluice\.js|src/[a-z-]+\.js|docs/[A-Z-]+\.md)$' files.txt || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::unexpected files in the package: $unexpected"
+            exit 1
+          fi
+      - name: installs globally and runs
+        run: |
+          npm install --global ./dist/package.tgz
+          sluice --help
+          sluice --storage "$RUNNER_TEMP/sluice" --print-key
+
+  # Dependency advisories fail the build (docs/DEPENDENCY-POLICY.md).
+  # `--audit-level moderate` sets the exit code, not only what is printed.
+  audit:
+    name: audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level moderate
+      # Prints what is installed, so a review has something to read.
+      - run: pnpm licenses list || true
+
+  # The same lockfile against OSV, which adds sources the GitHub Advisory
+  # Database lacks, among them reports of malicious packages. No severity
+  # threshold: any finding fails. Exceptions go in osv-scanner.toml with
+  # an ignoreUntil date, so an expired one fails the build again.
+  #
+  # The image runs directly rather than through Google's reusable
+  # workflow, which wants `security-events: write` for SARIF, and it is
+  # pinned by digest: v2.7.0, the image Adhal's CI uses. It read sluice's
+  # lockfile v9 and found 96 packages on 2026-11-25. To upgrade, pull the
+  # new tag from google/osv-scanner-action and pin the digest
+  # `docker pull` prints.
+  osv:
+    name: osv-scanner
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: >-
+          docker run --rm -v "$PWD":/src:ro
+          ghcr.io/google/osv-scanner-action@sha256:d54770fe0b09493894e76a02aaed9f51a0513fa57c5186452a755d257b0068a6
+          scan source
+          --config=/src/osv-scanner.toml
+          --lockfile=/src/pnpm-lock.yaml
