@@ -106,7 +106,7 @@ How to read them:
 | Field | Meaning |
 | --- | --- |
 | `pairing`, `side`, `session`, `requestedAt` | Which request |
-| `outcome` | `session-closed`: its session closed first, as hyperdht's client closes it after its 15 s relay timeout. `unpaired`: an unpair cancelled it. `relay-stopped` |
+| `outcome` | `session-closed`: its session closed first, as hyperdht's client closes it after its 15 s relay timeout. `unpaired`: an unpair canceled it. `relay-stopped` |
 | `unpairedBySession` | With `unpaired`: the session that sent the unpair |
 | `pendingMs` | How long it waited |
 | `pastClientTimeout` | Whether it waited at least 15 s, the point at which hyperdht 6.36.0's client gives up |

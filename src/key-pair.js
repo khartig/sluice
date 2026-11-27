@@ -41,11 +41,40 @@ function loadOrCreateKeyPair (dir) {
     created = true
     text = readPrivate(file)
   }
+  return { keyPair: parseSeed(text, file), created, file }
+}
+
+/**
+ * The key pair stored in `dir`, which must already exist: for reading the
+ * key, where a new pair would be a key no relay announces.
+ *
+ * @param {string} dir
+ * @returns {{ keyPair: KeyPair, file: string }}
+ */
+function loadKeyPair (dir) {
+  const file = path.join(dir, SEED_FILE)
+  /** @type {string} */
+  let text
+  try {
+    text = readPrivate(file)
+  } catch (err) {
+    if (/** @type {NodeJS.ErrnoException} */ (err).code !== 'ENOENT') throw err
+    throw new Error(`no key pair in ${dir}; the relay creates one on its first start. Is --storage the directory the relay runs with?`)
+  }
+  return { keyPair: parseSeed(text, file), file }
+}
+
+/**
+ * @param {string} text
+ * @param {string} file
+ * @returns {KeyPair}
+ */
+function parseSeed (text, file) {
   const hex = text.trim()
   if (!/^[0-9a-f]{64}$/.test(hex)) {
     throw new Error(`${file} must hold the relay's 32-byte seed as 64 lowercase hex characters`)
   }
-  return { keyPair: HyperDHT.keyPair(Buffer.from(hex, 'hex')), created, file }
+  return HyperDHT.keyPair(Buffer.from(hex, 'hex'))
 }
 
 /** @param {string} file */
@@ -86,4 +115,4 @@ function encodeZ32 (bytes) {
   return out
 }
 
-module.exports = { loadOrCreateKeyPair, encodeZ32, SEED_FILE }
+module.exports = { loadOrCreateKeyPair, loadKeyPair, encodeZ32, SEED_FILE }

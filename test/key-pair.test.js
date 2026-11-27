@@ -5,7 +5,7 @@ const assert = require('node:assert')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { loadOrCreateKeyPair, encodeZ32, SEED_FILE } = require('../src/key-pair')
+const { loadOrCreateKeyPair, loadKeyPair, encodeZ32, SEED_FILE } = require('../src/key-pair')
 
 // The z32 package hyperdht depends on, as the reference encoding.
 /** @type {{ encode: (b: Buffer) => string }} */
@@ -44,6 +44,20 @@ test('a seed file that is not 64 hex characters is refused', (t) => {
   fs.mkdirSync(dir, { mode: 0o700 })
   fs.writeFileSync(path.join(dir, SEED_FILE), 'not a seed\n', { mode: 0o600 })
   assert.throws(() => loadOrCreateKeyPair(dir), /64 lowercase hex characters/)
+})
+
+test('loadKeyPair reads the stored pair and never creates one', (t) => {
+  const dir = tempDir(t)
+  assert.throws(() => loadKeyPair(dir), /no key pair in .*storage/)
+  assert.strictEqual(fs.existsSync(dir), false)
+
+  const created = loadOrCreateKeyPair(dir)
+  const loaded = loadKeyPair(dir)
+  assert.ok(loaded.keyPair.publicKey.equals(created.keyPair.publicKey))
+  assert.ok(loaded.keyPair.secretKey.equals(created.keyPair.secretKey))
+
+  fs.chmodSync(created.file, 0o644)
+  assert.throws(() => loadKeyPair(dir), /readable by group or others/)
 })
 
 test('z-base-32 matches the z32 package', () => {

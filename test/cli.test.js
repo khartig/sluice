@@ -90,3 +90,21 @@ test('a bad option is a usage error, with exit status 2', () => {
   assert.match(stderr, /--port must be a whole number from 0 to 65535/)
   assert.match(stderr, /Usage: sluice/)
 })
+
+test('--print-key with no key pair in --storage fails, and creates none', (t) => {
+  const storage = path.join(tempDir(t), 'storage')
+  let status = 0
+  let stdout = ''
+  let stderr = ''
+  try {
+    execFileSync(process.execPath, [BIN, '--storage', storage, '--print-key'], { encoding: 'utf8', stdio: 'pipe' })
+  } catch (err) {
+    status = /** @type {any} */ (err).status
+    stdout = /** @type {any} */ (err).stdout
+    stderr = /** @type {any} */ (err).stderr
+  }
+  assert.strictEqual(status, 1)
+  assert.strictEqual(stdout, '')
+  assert.match(stderr, /^sluice: no key pair in .*storage/)
+  assert.strictEqual(fs.existsSync(storage), false)
+})

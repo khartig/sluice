@@ -213,9 +213,9 @@ class PairingObserver {
         if (leg && leg.session === info) pairing.unpairedBy = leg.side
       }
     }
-    const cancelledBefore = this._stats.pairings.cancelled
+    const canceledBefore = this._stats.pairings.cancelled
     call()
-    if (this._stats.pairings.cancelled === cancelledBefore) return
+    if (this._stats.pairings.cancelled === canceledBefore) return
     const at = this._now()
     for (const side of /** @type {Side[]} */ (['initiator', 'responder'])) {
       const key = `${token}:${side}`

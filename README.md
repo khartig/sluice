@@ -58,7 +58,9 @@ It prints its public key, in hex and in z-base-32. Clients name the
 relay by that key: Adhal's `--relay=<key>`. The key pair is created on
 first run in `~/.sluice` (`--storage` to change it) and reused after, so
 the key stays the same across restarts. Its seed file must stay readable
-only by its owner. `sluice --print-key` prints the key and exits.
+only by its owner. `sluice --print-key` prints the key and exits; it
+reads the key pair in `--storage` and fails if there is none, rather
+than create one.
 `--port` fixes the DHT node's UDP port, for a firewall rule.
 
 SIGINT or SIGTERM stops it: every session is ended, the log is flushed,

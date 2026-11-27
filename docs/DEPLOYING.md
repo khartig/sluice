@@ -97,6 +97,10 @@ journalctl -u sluice -n 20           # prints the relay's key
 sudo -u sluice sluice --storage /var/lib/sluice --print-key
 ```
 
+`--print-key` needs the service's `--storage`: without it, it looks in
+`~/.sluice` and fails with "no key pair", since that is not where the
+service keeps its key.
+
 ## Firewall
 
 The relay needs UDP in on its `--port`. With ufw:

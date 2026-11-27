@@ -113,12 +113,12 @@ test('a request that never matches is recorded with how it ended', async (t) => 
   await until(() => relay.stats.pairings.pending === 1)
   abandoned.close()
 
-  // Cancelled: its client unpairs.
-  const cancelling = relayClient(node, relay.publicKey)
-  const cancelledToken = BlindRelay.token()
-  cancelling.pair(false, cancelledToken).catch(() => {})
+  // Canceled: its client unpairs.
+  const canceling = relayClient(node, relay.publicKey)
+  const canceledToken = BlindRelay.token()
+  canceling.pair(false, canceledToken).catch(() => {})
   await until(() => relay.stats.pairings.pending === 1)
-  cancelling.client.unpair(cancelledToken)
+  canceling.client.unpair(canceledToken)
 
   await until(() => ofType(records, 'request').length === 2)
   const byPairing = Object.fromEntries(ofType(records, 'request').map((r) => [r.pairing, r]))
@@ -129,7 +129,7 @@ test('a request that never matches is recorded with how it ended', async (t) => 
   assert.strictEqual(gone.pastClientTimeout, false)
   assert.ok(gone.pendingMs >= 0)
 
-  const unpaired = byPairing[cancelledToken.toString('hex').slice(0, PAIRING_ID_HEX)]
+  const unpaired = byPairing[canceledToken.toString('hex').slice(0, PAIRING_ID_HEX)]
   assert.strictEqual(unpaired.outcome, 'unpaired')
   assert.strictEqual(unpaired.side, 'responder')
   assert.strictEqual(unpaired.unpairedBySession, unpaired.session)

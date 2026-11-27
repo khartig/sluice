@@ -3,7 +3,7 @@
 const os = require('node:os')
 const path = require('node:path')
 const { parseArgs } = require('node:util')
-const { loadOrCreateKeyPair, encodeZ32 } = require('./key-pair')
+const { loadOrCreateKeyPair, loadKeyPair, encodeZ32 } = require('./key-pair')
 const { startRelay } = require('./relay')
 const { DailyFileSink, StreamSink } = require('./log-sink')
 
@@ -17,7 +17,8 @@ Runs a blind relay over hyperdht, wire-compatible with Pear's
 Options:
   --storage <dir>             where the relay's key pair is kept
                               (default: ~/.sluice)
-  --print-key                 print the relay's public key and exit
+  --print-key                 print the relay's public key and exit; fails
+                              if --storage holds no key pair yet
   --port <n>                  UDP port for the DHT node (default: any)
   --host <address>            address to bind the DHT node to
   --bootstrap <host:port,...> DHT bootstrap nodes (default: the public DHT)
@@ -52,12 +53,13 @@ async function main (argv, { stdout = process.stdout, stderr = process.stderr } 
     return 0
   }
 
-  const { keyPair, created, file } = loadOrCreateKeyPair(options.storage)
-  const hex = keyPair.publicKey.toString('hex')
+  // --print-key only reads: a key it made up would be one no relay announces.
   if (options.printKey) {
-    stdout.write(hex + '\n')
+    stdout.write(loadKeyPair(options.storage).keyPair.publicKey.toString('hex') + '\n')
     return 0
   }
+  const { keyPair, created, file } = loadOrCreateKeyPair(options.storage)
+  const hex = keyPair.publicKey.toString('hex')
   if (created) stderr.write(`sluice: created a new key pair in ${file}\n`)
 
   /** @type {{ write: (record: Record<string, unknown>) => void, close: () => Promise<void> } | null} */
