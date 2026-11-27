@@ -98,7 +98,17 @@ jobs:
         run: |
           npm install --global ./dist/package.tgz
           sluice --help
-          sluice --storage "$RUNNER_TEMP/sluice" --print-key
+          # --print-key only reads a key pair, so store a seed first, as the
+          # relay does on its first start. Deriving the key from it loads
+          # hyperdht and its native sodium build from the installed package.
+          storage="$RUNNER_TEMP/sluice"
+          mkdir -m 700 "$storage"
+          (umask 077 && openssl rand -hex 32 > "$storage/relay-seed")
+          key=$(sluice --storage "$storage" --print-key)
+          if ! printf '%s\n' "$key" | grep -Eqx '[0-9a-f]{64}'; then
+            echo "::error::--print-key printed '$key', not a 64-character hex key"
+            exit 1
+          fi
 
   # Dependency advisories fail the build (docs/DEPENDENCY-POLICY.md).
   # `--audit-level moderate` sets the exit code, not only what is printed.
